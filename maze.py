@@ -124,6 +124,9 @@ while running:
         text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
         screen.blit(text, text_rect)
 
+        # Exit the game loop when the game is over
+        running = False
+
     # Update the display
     pygame.display.flip()
 
