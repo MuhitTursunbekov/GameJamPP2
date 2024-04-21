@@ -12,7 +12,7 @@ pygame.display.set_caption("A Maze Game")
 
 # Define colors
 BLACK = (0, 0, 0)
-WHITE = (255, 255, 255)
+WHITE = (255, 255, 255) 
 GOLD = (255, 215, 0)
 
 # Define player and wall sizes
@@ -97,7 +97,10 @@ while running:
         # Check if the player reached the end of the maze
         if player.rect.x >= (MAZE_WIDTH - 2) * WALL_SIZE and player.rect.y >= (MAZE_HEIGHT - 2) * WALL_SIZE:
             game_over = True
-            elapsed_time = 120 - elapsed_time  # Adjust elapsed time to show remaining time after reaching the end
+
+        # Check if time has run out
+        if elapsed_time >= 120:
+            game_over = True
 
     # Clear the screen
     screen.fill(BLACK)
@@ -130,4 +133,3 @@ while running:
 # Quit Pygame
 pygame.quit()
 sys.exit()
-
