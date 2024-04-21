@@ -1,174 +1,133 @@
-import turtle
-import math
+import pygame
+import sys
+import random
 
-wn = turtle.Screen()
-wn.bgcolor("black")
-wn.title("A Maze Game")
-wn.setup(700, 700)
+# Initialize Pygame
+pygame.init()
 
-# Register shapes
-turtle.register_shape("wizard_right.gif")
-turtle.register_shape("wizard_left.gif")
-turtle.register_shape("treasure.gif")
-turtle.register_shape("wall.gif")
+# Set up the window
+SCREEN_WIDTH, SCREEN_HEIGHT = 700, 700
+screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+pygame.display.set_caption("A Maze Game")
 
-# Create pen
-class Pen(turtle.Turtle):
-    def __init__(self):
-        turtle.Turtle.__init__(self)
-        self.shape("square")
-        self.color("white")
-        self.penup()
-        self.speed(0)
+# Define colors
+BLACK = (0, 0, 0)
+WHITE = (255, 255, 255)
+GOLD = (255, 215, 0)
 
-class Player(turtle.Turtle):
-    def __init__(self):
-        turtle.Turtle.__init__(self)
-        self.shape("wizard_right.gif")
-        self.color("blue")
-        self.penup()
-        self.speed(0)
-        self.gold = 0
+# Define player and wall sizes
+PLAYER_SIZE = 24
+WALL_SIZE = 24
 
-    def go_up(self):
-        move_to_x = self.xcor()
-        move_to_y = self.ycor() + 24
-        
-        if (move_to_x, move_to_y) not in walls:
-            self.goto(move_to_x, move_to_y)
+# Maze size
+MAZE_WIDTH = SCREEN_WIDTH // WALL_SIZE
+MAZE_HEIGHT = SCREEN_HEIGHT // WALL_SIZE
 
-    def go_down(self):
-        move_to_x = self.xcor()
-        move_to_y = self.ycor() - 24
-        
-        if (move_to_x, move_to_y) not in walls:
-            self.goto(move_to_x, move_to_y)
+# Generate random maze
+def generate_maze():
+    maze = [["X" for _ in range(MAZE_WIDTH)] for _ in range(MAZE_HEIGHT)]
 
-    def go_left(self):
-        move_to_x = self.xcor() - 24
-        move_to_y = self.ycor()
-        self.shape("wizard_left.gif")
-        
-        if (move_to_x, move_to_y) not in walls:
-            self.goto(move_to_x, move_to_y)
+    def recursive_backtracking(x, y):
+        maze[y][x] = " "
+        directions = [(1, 0), (-1, 0), (0, 1), (0, -1)]
+        random.shuffle(directions)
+        for dx, dy in directions:
+            nx, ny = x + dx * 2, y + dy * 2
+            if 0 <= nx < MAZE_WIDTH and 0 <= ny < MAZE_HEIGHT and maze[ny][nx] == "X":
+                maze[y + dy][x + dx] = " "
+                recursive_backtracking(nx, ny)
 
-    def go_right(self):
-        move_to_x = self.xcor() + 24
-        move_to_y = self.ycor()
+    recursive_backtracking(1, 1)
+    return maze
 
-        self.shape("wizard_right.gif")
-        
-        if (move_to_x, move_to_y) not in walls:
-            self.goto(move_to_x, move_to_y)
-        
-    def is_collision(self, other):
-        a = self.xcor() - other.xcor()
-        b = self.ycor() - other.ycor()
-        distance = math.sqrt((a**2) + (b**2))
-        
-        if distance < 5:
-            return True
-        else:
-            return False
-    
-class Treasure(turtle.Turtle):
+# Function to draw the maze
+def draw_maze(maze):
+    for y, row in enumerate(maze):
+        for x, char in enumerate(row):
+            if char == "X":
+                pygame.draw.rect(screen, WHITE, (x * WALL_SIZE, y * WALL_SIZE, WALL_SIZE, WALL_SIZE))
+
+# Player class
+class Player(pygame.sprite.Sprite):
     def __init__(self, x, y):
-        turtle.Turtle.__init__(self)
-        self.shape("treasure.gif")
-        self.color("gold")
-        self.penup()
-        self.speed(0)
-        self.gold = 100
-        self.goto(x, y)
+        super().__init__()
+        self.image = pygame.Surface((PLAYER_SIZE, PLAYER_SIZE))
+        self.image.fill(GOLD)
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
-    def destroy(self):
-        self.goto(2000, 2000)
-        self.hideturtle()
+# Create player
+player = Player(PLAYER_SIZE, PLAYER_SIZE)
 
-# Create levels list
-levels = [""]
+# Generate and draw maze
+maze = generate_maze()
 
-# Define first level
-level_1 = [
-    "XXXXXXXXXXXXXXXXXXXXXXXXX",
-    "XP  XX               XXXX",
-    "X  XX  XXX  XXXXXX  XXXXX",
-    "X  XX  XXXXXXXXXXX  XXXXX",
-    "X      XXXXX  XXXX    XXX",
-    "XXX  XXXXXXX  XXXX   XXXX",
-    "XXX  XX  XXX  T       XXX",
-    "XXX  XX  XXXXXXXXXXXXXXXX",
-    "X        XXXX  XXXXXXXXXX",
-    "XXXXXXX  XX        XXXXXX",
-    "XXXXXXX      XXXX    XXXX",
-    "XX    XXXXXXXXXXX  XXXXXX",
-    "XX       XXXXXX      XXXX",
-    "XX  XXX    XXXXXXXX  XXXX",
-    "XX  XXXXXXXXX   XXX  XXXX",
-    "XX                    XXX",
-    "XXXXXXXXXXXXX   XXXX  XXX",
-    "XX         XXX  XX    XXX",
-    "XXXXXXXXXXXXXXXXX   XXXXX",
-    "XX                 XXXXXX",
-    "XX  XXXXXXXXXXXXXXXXXXXXX",
-    "XX  X                  XX",
-    "XX     XXXXXXXXXXX     XX",
-    "XXXXXXXXXXXXXXXXXX     XX",
-    "XXXXXXXXXXXXXXXXXXXXXXXXX"
-]
-
-# Add a treasure list
-treasures = []
-
-# Add maze to mazes list
-levels.append(level_1)
-
-# Create level setup function
-def setup_maze(level):
-    for y in range(len(level)):
-        for x in range(len(level[y])):
-            character = level[y][x]
-            screen_x = -288 + (x * 24)
-            screen_y = 288 - (y * 24)
-            if character == "X":
-                pen.goto(screen_x, screen_y)
-                pen.shape("wall.gif")
-                pen.stamp()
-                walls.append((screen_x, screen_y))
-
-            if character == "P":
-                player.goto(screen_x, screen_y)
-            
-            if character == "T":
-                treasures.append(Treasure(screen_x, screen_y))
-            
-# Create class instances
-pen = Pen()
-player = Player()
-
-# Create wall coordinate list 
-walls = []
-
-# Set up the level
-setup_maze(levels[1])
-
-
-# Keyboard Binding
-turtle.listen()
-turtle.onkey(player.go_left, "Left")
-turtle.onkey(player.go_right, "Right")
-turtle.onkey(player.go_up, "Up")
-turtle.onkey(player.go_down, "Down")
-
-# Turn off screen updates
-wn.tracer(0)
+# Timer variables
+clock = pygame.time.Clock()
+start_time = pygame.time.get_ticks()
+game_over = False
 
 # Main game loop
-while True:
-    for treasure in treasures:
-        if player.is_collision(treasure):
-            player.gold += treasure.gold
-            print("Player Gold: {}".format(player.gold))
-            treasure.destroy()
-            treasures.remove(treasure)
-    wn.update()
+running = True
+while running:
+    # Calculate elapsed time
+    elapsed_time = (pygame.time.get_ticks() - start_time) / 1000
+
+    # Check if the game is over
+    if not game_over:
+        # Handle events
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_LEFT:
+                    if maze[player.rect.y // WALL_SIZE][(player.rect.x - PLAYER_SIZE) // WALL_SIZE] == " ":
+                        player.rect.x -= PLAYER_SIZE
+                elif event.key == pygame.K_RIGHT:
+                    if maze[player.rect.y // WALL_SIZE][(player.rect.x + PLAYER_SIZE) // WALL_SIZE] == " ":
+                        player.rect.x += PLAYER_SIZE
+                elif event.key == pygame.K_UP:
+                    if maze[(player.rect.y - PLAYER_SIZE) // WALL_SIZE][player.rect.x // WALL_SIZE] == " ":
+                        player.rect.y -= PLAYER_SIZE
+                elif event.key == pygame.K_DOWN:
+                    if maze[(player.rect.y + PLAYER_SIZE) // WALL_SIZE][player.rect.x // WALL_SIZE] == " ":
+                        player.rect.y += PLAYER_SIZE
+
+        # Check if the player reached the end of the maze
+        if player.rect.x >= (MAZE_WIDTH - 2) * WALL_SIZE and player.rect.y >= (MAZE_HEIGHT - 2) * WALL_SIZE:
+            game_over = True
+            elapsed_time = 120 - elapsed_time  # Adjust elapsed time to show remaining time after reaching the end
+
+    # Clear the screen
+    screen.fill(BLACK)
+
+    # Draw the maze
+    draw_maze(maze)
+
+    # Draw the player
+    screen.blit(player.image, player.rect)
+
+    # Display timer
+    if not game_over:
+        font = pygame.font.Font(None, 36)
+        text = font.render(f"Time: {int(max(120 - elapsed_time, 0))}", True, WHITE)
+        screen.blit(text, (10, 10))
+
+    # Display game over message
+    if game_over:
+        font = pygame.font.Font(None, 72)
+        text = font.render("Game Over!", True, WHITE)
+        text_rect = text.get_rect(center=(SCREEN_WIDTH // 2, SCREEN_HEIGHT // 2))
+        screen.blit(text, text_rect)
+
+    # Update the display
+    pygame.display.flip()
+
+    # Cap the frame rate
+    clock.tick(30)
+
+# Quit Pygame
+pygame.quit()
+sys.exit()
+
